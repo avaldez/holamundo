@@ -1,0 +1,416 @@
+* Program-ID..:  MAIN.PRG
+* Purpose.....:  MAIN program for application
+*!* Incluir fichero de constantes
+
+CLEAR
+CLEAR ALL
+CLOSE ALL
+SET TALK       OFF
+SET CONFIRM    ON
+SET MULTILOCKS ON
+SET CENTURY    ON
+SET EXCLUSIVE  ON
+SET SAFETY     OFF
+SET DELETED    ON
+SET STRICTDATE TO 0
+SET DATE TO BRITISH
+SET EXACT ON
+SET HOURS TO 24
+SET ENGINEBEHAVIOR 70
+
+*!* Barra de estado y menú
+SET STATUS BAR OFF
+SET SYSMENU AUTOMATIC
+SET SYSMENU TO
+
+
+#INCLUDE comun.h
+********************************************** **********************************************************
+*  EL FICHERO DE CONSTANTES comun.h ESTÁ INCLUIDO TAMBIEN EL LOS FORMULARIOS  Y EN LOS MENUS *
+*********************************************************************************************************
+
+
+*!* Variables locales
+LOCAL lnCnt, lnHwnd, lcNewDir, lwStartUp
+LOCAL ARRAY laVFPBars(2)
+PUBLIC veces && cantidad de veces que ingresara usuario o password para ingresar
+veces=0
+*!* Valores
+laVFPBars( 1) = WIN_COMMAND_LOC
+laVFPBars( 2) = TB_STANDARD_LOC
+
+*laVFPBars( 3) = TB_LAYOUT_LOC
+*laVFPBars( 4) = TB_QUERY_LOC
+*laVFPBars( 5) = TB_VIEWDESIGNER_LOC
+*laVFPBars( 6) = TB_COLORPALETTE_LOC
+*laVFPBars( 7) = TB_FORMCONTROLS_LOC
+*laVFPBars( 8) = TB_DATADESIGNER_LOC
+*laVFPBars( 9) = TB_REPODESIGNER_LOC
+*laVFPBars(10) = TB_REPOCONTROLS_LOC
+*laVFPBars(11) = TB_PRINTPREVIEW_LOC
+*laVFPBars(12) = WIN_COMMAND_LOC
+*laVFPBars(13) = WIN_PROYECT_LOC
+
+*!* Ocultar barras y ventanas de VFP
+FOR lnCnt = 1 TO 2
+    IF WVISIBLE(laVFPBars(lnCnt))
+        HIDE WINDOW (laVFPBars(lnCnt))
+    ENDIF
+ENDFOR
+
+_screen.Icon = 'c:\sistemas\paraquariaresto\iconos\favourites.ico'
+_screen.Caption= " "
+ 
+*!* Instrucciones DECLARE DLL para manipular ventanas
+DECLARE INTEGER FindWindow IN Win32API STRING lpClassName, STRING lpWindowName
+DECLARE INTEGER BringWindowToTop IN Win32API INTEGER hwnd
+DECLARE INTEGER SendMessage IN Win32API INTEGER hwnd, INTEGER Msg, INTEGER WParam, INTEGER LParam
+
+ON ERROR DO ErrTrap WITH LINENO(), PROGRAM(), MESSAGE(), MESSAGE(1)
+
+*!* Impedir que se salga de la aplicación
+ON SHUTDOWN DO SALIR 
+
+*!* Se Modela el PATH
+lcNewDir = JUSTPATH(SYS(16, 0))  
+CD (lcNewDir)
+SET DEFAULT TO (lcNewDir)
+SET PATH TO Clases,Database,Form,Iconos,Menu,Prgs,Project,Report,Tables
+
+*!* Saber si la aplicación ya ha sido arrancada
+lnHwnd = FindWindow(0, TITULOAPP_LOC)
+
+
+    **************************************************************************
+    *  A PARTIR DE AQUI TU APLICACIÓN CONTINUA, CARGAS EL OBJETO APLICACION, *                            *
+    *  INICIAS EL BUCLE READ EVENTS, TU MENU, EL FORMULARIO DE LOGIN, ETC    *
+    **************************************************************************
+*!* Impedir que se pueda arrancar mas de una vez la aplicación
+*IF  lnHwnd > 0
+    *!* Si ya se habia arrancado antes la aplicación
+    BringWindowToTop(lnHwnd)                           && Mandar la ventana de la aplicación al frente
+    SendMessage(lnHwnd, WM_SYSCOMMAND, SC_MAXIMIZE, 0) && Maximizar la ventana de la aplicación
+*ELSE
+
+	
+*  	DO FOXYPREVIEWER.APP 
+
+	*!* Mostrar la ventana de arranque
+	DO FORM "frm_Arranque" NAME lwStartUp LINKED
+    =INKEY(1) && QUITA ESTA LINEA    
+    
+	SET PROCEDURE TO DataTier.PRG, RUTINAS.PRG
+
+	oDataTier = CREATEOBJECT ( [DataTier] )
+	oDataTier.AccessMethod = [SQL]			&& Last one will be used
+
+	* The following string was needed because my laptop has a different server name.
+	* Ordinarily the default "(local)" will be adequate.
+
+	*!*	oDataTier.ConnectionString = [Driver={SQL Server};Server=VAIO\VAIO;Database=Northwind;UID=sa;PWD=;]
+	*!*	oDataTier.AccessMethod = [SQL Server]	&& Last one will be used
+	
+	*!* Liberar formulario arranque
+	RELEASE lwStartUp
+          	
+	WITH _Screen
+	*.AddObject ( [Title1], [Title], 0, 0 )
+	*.AddObject ( [Title2], [Title], 3, 3 )
+	*.Title2.ForeColor = RGB ( 255, 0, 0  )
+	
+	 *!* Si no se habia arrancado antes la aplicacion,
+    .Caption   = TITULOAPP_LOC && Establecer título de la aplicacion
+    .BackColor = COLOR_WHITE && Establecer color de fondo de la aplicacion
+
+    *!* _SCREEN visible. Mostramos la aplicación
+    .WindowState = WINDOWSTATE_MAXIMIZED
+    .Visible     = .T.
+	.Picture =' '
+	*.Picture ='logo_extremosur.jpg'
+    
+    IF NOT PEMSTATUS(_Screen,"oMiToolBar",5)
+      _Screen.ADDPROPERTY("oMiToolBar",NULL)
+    ENDIF
+    IF ISNULL(_Screen.oMiToolBar)
+      _Screen.oMiToolBar = CREATEOBJECT("MiToolBar")
+      _Screen.oMiToolBar.SHOW
+      _Screen.oMitoolbar.Dock(0)
+      _Screen.oMitoolbar.enabled=.t.
+      
+ 	ENDIF
+    
+    IF NOT PEMSTATUS(_Screen,"oMiToolBar2",5)
+      _Screen.ADDPROPERTY("oMiToolBar2",NULL)
+    ENDIF
+    IF ISNULL(_Screen.oMiToolBar2)
+      _Screen.oMiToolBar2= CREATEOBJECT("MiToolBar2")
+      _Screen.oMiToolBar2.SHOW
+*      _Screen.oMiToolBar2.lblusuario.caption = " " 
+*     _Screen.oMiToolBar2.lblbasedatos.caption = "Base Datos: MYSQL SERVER"           
+      _Screen.oMitoolbar2.Dock(0,1500,1)
+      _Screen.oMitoolbar2.enabled=.t.
+      
+ 	ENDIF
+
+    
+    ENDWITH
+     
+
+    *!* Liberar variables locales
+    RELEASE lnCnt, lnHwnd, lcNewDir, laVFPBars
+
+   IF NOT EMPTY ( oDataTier.AccessMethod )		
+   *!* Mostrar la ventana de INGRESO y Password.	   	
+	   	DO FORM "frm_password" WITH 1  	    	
+    	DO menu.MPR
+		READ EVENTS		
+	ENDIF
+*ENDIF
+
+********************************************** ******************************************
+*
+*  LA INSTRUCCION DE ABAJO DESTRUYE EL FORMULARIO DE ARRANQUE LO HACEMOS UNA VEZ QUE    *
+*  YA HEMOS EL CONFIGURADO EL ENTORNO Y HECHO TODAS LAS OPRECACIONES DE ARRANQUE        *
+*  QUITA LA LINEA INKEY=(10) SOLO ESTÁ PUESTA PARA PAUSAR 10 SEGUNDOS AL VER EL FORM    *
+************************************************ ****************************************
+
+
+ON ERROR
+
+SET PROCEDURE TO
+SET CLASSLIB TO 
+
+SET SYSMENU TO DEFAULT
+ON SHUTDOWN
+
+
+*WITH _Screen
+*.RemoveObject ( [Title1] )
+*.RemoveObject ( [Title2] )
+*ENDWITH
+
+
+DEFINE CLASS Title AS Label
+Visible   = .T.
+BackStyle =  0
+FontName  = [Times New Roman]
+FontSize  =  48
+Height    = 100
+Width     = 800
+Left      =  25
+Caption   = [ ]
+ForeColor = RGB ( 192, 192, 192 )
+
+PROCEDURE Init
+LPARAMETERS nTop, nLeft
+THIS.Top = _Screen.Height - 100 - nTop
+THIS.Left=                   25 - nLeft
+ENDPROC
+
+ENDDEFINE
+
+
+PROCEDURE ErrTrap
+LPARAMETERS nLine, cProg, cMessage, cMessage1
+OnError = ON("Error")
+ON ERROR
+IF NOT FILE ( [ERRORS.DBF] )
+   CREATE TABLE ERRORS (;
+    Date	 Date,		;
+    Time	 Char(5),	;
+    LineNum	 Integer,	;
+    ProgName Char(30),	;
+    Msg		 Char(240),	;
+    CodeLine Char(240)	)
+ENDIF
+IF NOT USED ( [Errors] )
+   USE ERRORS IN 0
+ENDIF
+SELECT Errors
+INSERT INTO Errors VALUES ( DATE(), LEFT(TIME(),5),  nLine, cProg, cMessage, cMessage1 )
+USE IN Errors
+cStr = [Error at line ] + TRANSFORM(nLine) + [ of ] + cprog + [:] + CHR(13)	;
+	 + cMessage + CHR(13) + [Code that caused the error:] + CHR(13) + cMessage1
+IF MESSAGEBOX( cStr, 292, [Continue] ) <> 6
+   SET SYSMENU TO DEFAULT
+   IF TYPE ( [_Screen.Title1] ) <> [U]
+      _Screen.RemoveObject ( [Title2] )
+      _Screen.RemoveObject ( [Title1] )
+   ENDIF
+   CLOSE ALL
+   RELEASE ALL
+   CANCEL
+  ELSE
+   ON ERROR &OnError
+ENDIF
+
+*--
+*-- Clase MiToolBar
+*--
+
+DEFINE CLASS MiToolBar AS TOOLBAR
+  *-- Propiedades
+  CAPTION = "Saludo"
+  SHOWTIPS  = .T.
+  SHOWWINDOW = 1 && En formulario de nivel superior
+  NAME = "MiToolBar"
+  *-- Objetos
+  ADD OBJECT cmdot AS COMMANDBUTTON WITH ;
+    HEIGHT = 65, WIDTH = 75, ;
+    PICTURE = "iconos\ot.bmp", ;
+    CAPTION = "\<Productos", NAME = "cmdot", TOOLTIPTEXT = "Carga de Productos",;
+    FONTSIZE = 7,;
+    FORECOLOR = RGB(0,0,255)    
+  ADD OBJECT sep1 AS SEPARATOR WITH ;
+    NAME = "sep1"
+  ADD OBJECT cmdoc AS COMMANDBUTTON WITH ;
+    HEIGHT = 65, WIDTH = 75, ;
+    PICTURE = "iconos\pedido_mesa.ico", ;
+    CAPTION = "Pedidos", NAME = "cmdco", TOOLTIPTEXT = "Pedidos",;
+    FONTSIZE = 7,;
+    FORECOLOR = RGB(0,0,255)
+  ADD OBJECT cmdliqui AS COMMANDBUTTON WITH ;
+    HEIGHT = 65, WIDTH = 75, ;
+    PICTURE = "iconos\Forward 2.ico", ;
+    CAPTION = "Devoluciones", NAME = "cmdvali", TOOLTIPTEXT = "Devoluciones",;
+    FONTSIZE = 7,;
+    FORECOLOR = RGB(0,0,255)
+ ADD OBJECT cmdventas AS COMMANDBUTTON WITH ;
+    HEIGHT = 65, WIDTH = 75, ;
+    PICTURE = "iconos\liquidacion.gif", ;
+    CAPTION = "Ventas", NAME = "cmdventas", TOOLTIPTEXT = "Ventas",;
+    FONTSIZE = 7,;
+    FORECOLOR = RGB(0,0,255)
+ ADD OBJECT cmdconsulta AS COMMANDBUTTON WITH ;
+    HEIGHT = 65, WIDTH = 75, ;
+    PICTURE = "iconos\document.ico", ;
+    CAPTION = "List. Pedidos", NAME = "cmdconsulta", TOOLTIPTEXT = "Listado de Pedidos",;
+    FONTSIZE = 7,;
+    FORECOLOR = RGB(0,0,255)
+
+ ADD OBJECT sep2 AS SEPARATOR WITH ;
+    NAME = "sep2"
+
+ ADD OBJECT cmdgastos AS COMMANDBUTTON WITH ;
+    HEIGHT = 65, WIDTH = 75, ;
+    PICTURE = "iconos\libro.ico", ;
+    CAPTION = "Gastos", NAME = "cmdgastos", TOOLTIPTEXT = "Cargar Gastos Diarios",;
+    FONTSIZE = 7,;
+    FORECOLOR = RGB(0,0,255)
+
+ ADD OBJECT sep4 AS SEPARATOR WITH ;
+    NAME = "sep4"
+    
+ ADD OBJECT cmdliquidacion AS COMMANDBUTTON WITH ;
+    HEIGHT = 65, WIDTH = 75, ;
+    PICTURE = "iconos\liquidacion.bmp", ;
+    CAPTION = "Liq.Vendedores", NAME = "cmdliquidacion", TOOLTIPTEXT = "Liquidación a Vendedores",;
+    FONTSIZE = 7,;
+    FORECOLOR = RGB(0,0,255)
+ 
+ ADD OBJECT sep3 AS SEPARATOR WITH ;
+    NAME = "sep3"   
+      
+ ADD OBJECT cmdsalir AS COMMANDBUTTON WITH ;
+    HEIGHT = 65, WIDTH = 75, ;
+    PICTURE = "iconos\log off.ico", ;
+    CAPTION = "Salir", NAME = "cmdsalir", TOOLTIPTEXT = "Salir de la Aplicacion",;
+    FONTSIZE = 7,;
+    FORECOLOR = RGB(0,0,255)
+    
+  *-- Metodos
+
+  PROCEDURE cmdsalir.CLICK
+   	do salir    
+  ENDPROC
+
+  PROCEDURE cmdot.CLICK
+    DO FORM frm_productos
+    *MESSAGEBOX("Hola !", 64, "Saludo")
+  ENDPROC
+  
+  PROCEDURE cmdco.CLICK
+  	 DO FORM frm_pedidos_diario.scx
+  	*DO FORM frm_pedidos5
+   * MESSAGEBOX("Hola !", 64, "Saludo")
+  ENDPROC
+  
+  PROCEDURE cmdvali.CLICK
+  	DO FORM frm_devolucion_diario.scx
+	*MESSAGEBOX("Hola !", 64, "Saludo")
+  ENDPROC
+
+  PROCEDURE cmdventas.CLICK
+  	*DO FORM frm_bus_producto
+	*MESSAGEBOX("Hola !", 64, "Saludo")
+  ENDPROC
+
+  PROCEDURE cmdconsulta.CLICK
+  	DO FORM frm_rango_pedidos.scx
+	*MESSAGEBOX("Hola !", 64, "Saludo")
+  ENDPROC
+  
+  PROCEDURE cmdgastos.CLICK
+  	DO FORM frm_gastos.scx
+	*MESSAGEBOX("Hola !", 64, "Saludo")
+  ENDPROC
+
+
+ PROCEDURE cmdliquidacion.CLICK
+  	DO FORM frm_liquidaciones_diario.scx
+ *  MESSAGEBOX("Hallo !", 64, "Grüß")
+ ENDPROC
+ENDDEFINE
+
+DEFINE CLASS MiToolBar2 AS TOOLBAR
+  *-- Propiedades
+  CAPTION = "Saludo2"
+  SHOWTIPS  = .T.
+  SHOWWINDOW = 1 && En formulario de nivel superior
+  NAME = "MiToolBar2"
+  *-- Objetos
+  ADD OBJECT sep1 AS SEPARATOR WITH ;
+    NAME = "sep1"
+  ADD OBJECT lblmarca AS LABEL WITH ;
+    HEIGHT = 55, WIDTH = 150, ;
+    CAPTION = "POSITIVO GESTION",;
+    FONTSIZE = 10,;
+    FONTBOLD = .T.,;
+    FORECOLOR = RGB(0,0,128)
+  ADD OBJECT sep2 AS SEPARATOR WITH ;
+    NAME = "sep2"    
+  ADD OBJECT lblusuario AS LABEL WITH ;
+    HEIGHT = 20, WIDTH = 130, ;
+    CAPTION = "Usuario ",;
+    FONTSIZE = 8,;
+    FORECOLOR = RGB(0,0,128)    
+ ADD OBJECT sep4 AS SEPARATOR WITH ;
+    NAME = "sep4"
+ ADD OBJECT lblfecha AS LABEL WITH ;
+    HEIGHT = 20, WIDTH = 130, ;
+    CAPTION = "Operativa",;
+    FONTSIZE = 10,;
+    FORECOLOR = RGB(0,0,128) 
+  ADD OBJECT sep5 AS SEPARATOR WITH ;
+    NAME = "sep5"
+ ADD OBJECT cmdsalir AS COMMANDBUTTON WITH ;
+    HEIGHT = 45, WIDTH = 45, ;
+    PICTURE = "iconos\salir.bmp", ;
+    CAPTION = "Salir", NAME = "cmdsalir", TOOLTIPTEXT = "Salir de la Aplicacion",;
+    FONTSIZE = 7,;
+    FORECOLOR = RGB(0,0,255)
+    
+ PROCEDURE cmdsalir.CLICK
+    do salir    
+ ENDPROC
+ 
+ENDDEFINE
+
+
+PROCEDURE salir
+	A=MESSAGEBOX("DESEA SALIR DE LA APLICACION?",33,"ATENCION")
+	IF A=1
+		*CLEAR EVENTS
+		QUIT 
+	ENDIF 
+ENDPROC
